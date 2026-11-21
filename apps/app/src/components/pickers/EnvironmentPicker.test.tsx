@@ -128,6 +128,47 @@ function renderPicker(ui: ReactElement) {
 }
 
 describe("EnvironmentPickerUI", () => {
+  it("prompts for an environment when the checkout is on another machine", () => {
+    const checkoutHost = makeHost({
+      id: "host_checkout",
+      name: "Build machine",
+    });
+    const onSelectProvider = vi.fn();
+    renderPicker(
+      <EnvironmentPickerUI
+        value=""
+        sources={sources.map((source) => ({
+          ...source,
+          hostId: checkoutHost.id,
+        }))}
+        host={host}
+        isLocal
+        machines={{
+          hosts: [host, checkoutHost],
+          localDaemonHostId: host.id,
+          primaryHostId: host.id,
+        }}
+        providers={[checkoutProvider]}
+        providersByHostId={new Map([[checkoutHost.id, [checkoutProvider]]])}
+        onSelectProvider={onSelectProvider}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Environment" });
+    for (const label of ["full", "compact"]) {
+      expect(
+        trigger.querySelector(`[data-promptbox-${label}-label]`)?.textContent,
+      ).toBe("Choose environment");
+    }
+
+    fireEvent.click(trigger, { button: 0 });
+    fireEvent.click(screen.getByRole("option", { name: /Project checkout/u }));
+    expect(onSelectProvider).toHaveBeenCalledWith(
+      checkoutProvider,
+      checkoutHost.id,
+    );
+  });
+
   it("does not expose an ephemeral host through the single-machine fallback", () => {
     const ephemeralHost: Host = {
       ...host,
